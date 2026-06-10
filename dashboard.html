@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Controle Florestal</title>
+  
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    /* CSS RESET & VARIABLES */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-app: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-card-hover: #fafafa;
+      
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-subtle: #94a3b8;
+      
+      --color-primary: #4f46e5;
+      --color-primary-light: #e0e7ff;
+      --color-primary-hover: #4338ca;
+      
+      --color-success: #10b981;
+      --color-success-light: #d1fae5;
+      --color-success-dark: #065f46;
+      
+      --color-warning: #f59e0b;
+      --color-warning-light: #fef3c7;
+      
+      --color-danger: #ef4444;
+      --color-danger-light: #fee2e2;
+      --color-danger-dark: #991b1b;
+      
+      --border-color: #e2e8f0;
+      --border-focus: #cbd5e1;
+      
+      --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-heading: 'Outfit', system-ui, -apple-system, sans-serif;
+      
+      --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.03), 0 1px 2px rgba(15, 23, 42, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.04), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+      --shadow-indigo: 0 4px 14px 0 rgba(79, 70, 229, 0.15);
+      
+      --transition-fast: 0.15s ease;
+      --transition-normal: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body {
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: row;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* COLLAPSIBLE SIDEBAR STYLING */
+    .sidebar {
+      background-color: var(--bg-card);
+      border-right: 1px solid var(--border-color);
+      width: 260px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      flex-shrink: 0;
+      transition: width var(--transition-normal);
+      z-index: 100;
+      position: relative;
+    }
+
+    .sidebar.collapsed {
+      width: 70px;
+    }
+
+    .sidebar-header {
+      padding: 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      overflow: hidden;
+      height: 73px;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--text-main);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .sidebar-brand-text {
+      transition: opacity var(--transition-fast);
+      opacity: 1;
+    }
+
+    .sidebar.collapsed .sidebar-brand-text {
+      display: none;
+    }
+
+    .sidebar.collapsed .sidebar-header {
+      justify-content: center;
+      padding: 1.25rem 0;
+    }
+
+    .sidebar-logo {
+      background: linear-gradient(135deg, var(--color-primary), #818cf8);
+      color: white;
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-indigo);
+      flex-shrink: 0;
+    }
+
+    .sidebar-brand-text h1 {
+      font-family: var(--font-heading);
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+
+    .sidebar-brand-text p {
+      font-size: 0.65rem;
+      color: var(--text-subtle);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .btn-toggle-sidebar {
+      position: absolute;
+      right: -12px;
+      top: 24px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      z-index: 200;
+      transition: background-color var(--transition-fast), transform var(--transition-fast);
+      color: var(--text-muted);
+    }
+
+    .btn-toggle-sidebar:hover {
+      background-color: var(--bg-app);
+      color: var(--color-primary);
+    }
+
+    /* SIDEBAR NAV LINKS */
+    .sidebar-nav {
+      padding: 1.5rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 0.875rem;
+      border-radius: 10px;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: var(--transition-fast);
+      white-space: nowrap;
+    }
+
+    .sidebar-link i {
+      flex-shrink: 0;
+    }
+
+    .sidebar-link-text {
+      transition: opacity var(--transition-fast);
+      opacity: 1;
+    }
+
+    .sidebar.collapsed .sidebar-link-text {
+      display: none;
+    }
+
+    .sidebar.collapsed .sidebar-link {
+      padding: 0.75rem 0;
+      justify-content: center;
+      gap: 0;
+    }
+
+    .sidebar.collapsed .sidebar-nav {
+      padding: 1.5rem 0.5rem;
+    }
+
+    .sidebar-link:hover {
+      color: var(--text-main);
+      background-color: #f1f5f9;
+    }
+
+    .sidebar-link.active {
+      color: var(--color-primary);
+      background-color: var(--color-primary-light);
+      font-weight: 600;
+    }
+
+    /* SIDEBAR FOOTER */
+    .sidebar-footer {
+      padding: 1rem 0.75rem;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .sidebar-user {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      background-color: #f1f5f9;
+      overflow: hidden;
+      transition: var(--transition-normal);
+    }
+
+    .sidebar.collapsed .sidebar-user {
+      padding: 0.5rem 0;
+      justify-content: center;
+      background-color: transparent;
+    }
+
+    .sidebar-user-avatar {
+      flex-shrink: 0;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sidebar-user-info {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      white-space: nowrap;
+      transition: opacity var(--transition-fast);
+      opacity: 1;
+    }
+
+    .sidebar.collapsed .sidebar-user-info {
+      display: none;
+    }
+
+    .sidebar.collapsed .sidebar-footer {
+      padding: 1rem 0.5rem;
+    }
+
+    .sidebar-user-email {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    .sidebar-user-role {
+      font-size: 0.65rem;
+      color: var(--text-subtle);
+    }
+
+    .btn-sidebar-logout {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 0.875rem;
+      border-radius: 10px;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      background: none;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: var(--color-danger);
+      transition: var(--transition-fast);
+      white-space: nowrap;
+      justify-content: flex-start;
+    }
+
+    .sidebar.collapsed .btn-sidebar-logout {
+      justify-content: center;
+      padding: 0.75rem 0;
+      gap: 0;
+    }
+
+    .sidebar.collapsed .btn-sidebar-logout span {
+      display: none;
+    }
+
+    .btn-sidebar-logout:hover {
+      background-color: var(--color-danger-light);
+      border-color: var(--color-danger);
+      color: var(--color-danger-dark);
+    }
+
+    /* MAIN CONTENT WRAPPER */
+    .main-layout-content {
+      flex: 1;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    /* CONTENT HEADER */
+    .content-header {
+      background-color: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      height: 73px;
+      flex-shrink: 0;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.875rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-card);
+    }
+
+    .status-badge.connected {
+      color: var(--color-success-dark);
+      background-color: var(--color-success-light);
+      border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    .status-badge.connecting {
+      color: #b45309;
+      background-color: var(--color-warning-light);
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+
+    .status-badge.disconnected {
+      color: #991b1b;
+      background-color: var(--color-danger-light);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: currentColor;
+    }
+
+    .status-badge.connected .status-dot {
+      animation: pulse-green 2s infinite;
+    }
+
+    @keyframes pulse-green {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    /* MAIN CONTAINER CONTENT */
+    main {
+      padding: 2rem;
+      width: 100%;
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    /* PAGE TITLE SECTION */
+    .page-title-block {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .page-title-block h2 {
+      font-family: var(--font-heading);
+      font-size: 1.75rem;
+      font-weight: 700;
+    }
+
+    .page-title-block p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition-fast);
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-card);
+      color: var(--text-muted);
+    }
+
+    .btn:hover {
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      border-color: var(--border-focus);
+    }
+
+    /* KPI CARDS GRID */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .kpi-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .kpi-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .kpi-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: -0.01em;
+    }
+
+    .kpi-icon-wrapper {
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f1f5f9;
+      color: var(--text-muted);
+    }
+
+    .kpi-card:nth-child(1) .kpi-icon-wrapper { background-color: #e0f2fe; color: #0284c7; }
+    .kpi-card:nth-child(2) .kpi-icon-wrapper { background-color: #e0f2fe; color: #0284c7; }
+    .kpi-card:nth-child(3) .kpi-icon-wrapper { background-color: #ecfdf5; color: #059669; }
+    .kpi-card:nth-child(4) .kpi-icon-wrapper { background-color: #faf5ff; color: #7c3aed; }
+
+    .kpi-value {
+      font-family: var(--font-heading);
+      font-size: 1.875rem;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1;
+    }
+
+    .kpi-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-subtle);
+      font-weight: 400;
+      margin-top: auto;
+    }
+
+    /* CHARTS CONTAINER */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .chart-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .chart-title-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chart-title {
+      font-family: var(--font-heading);
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .chart-wrapper {
+      position: relative;
+      width: 100%;
+      height: 280px;
+    }
+
+    /* TOAST NOTIFICATIONS */
+    .toast-container {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      pointer-events: none;
+    }
+
+    .toast {
+      background-color: var(--bg-card);
+      color: var(--text-main);
+      padding: 1rem 1.25rem;
+      border-radius: 12px;
+      box-shadow: var(--shadow-lg);
+      border-left: 4px solid var(--color-success);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 300px;
+      max-width: 400px;
+      transform: translateY(1rem);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: auto;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast-icon {
+      color: var(--color-success);
+      flex-shrink: 0;
+    }
+
+    .toast-content {
+      flex: 1;
+    }
+
+    .toast-title {
+      font-weight: 600;
+      font-size: 0.875rem;
+      font-family: var(--font-heading);
+    }
+
+    .toast-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.125rem;
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding: 1.5rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-subtle);
+      background-color: var(--bg-card);
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- COLLAPSIBLE SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <button class="btn-toggle-sidebar" id="btnToggleSidebar" title="Recolher/Expandir Menu">
+      <span id="toggleIconContainer">
+        <i data-lucide="chevron-left"></i>
+      </span>
+    </button>
+    <div class="sidebar-header">
+      <a href="index.html" class="sidebar-brand">
+        <div class="sidebar-logo">
+          <i data-lucide="activity"></i>
+        </div>
+        <div class="sidebar-brand-text">
+          <h1>Controle Florestal</h1>
+          <p>Realtime Monitor</p>
+        </div>
+      </a>
+    </div>
+
+    <!-- Navigation links -->
+    <nav class="sidebar-nav">
+      <a href="index.html" class="sidebar-link">
+        <i data-lucide="file-text"></i>
+        <span class="sidebar-link-text">Comprovantes</span>
+      </a>
+      <a href="dashboard.html" class="sidebar-link active">
+        <i data-lucide="bar-chart-3"></i>
+        <span class="sidebar-link-text">Dashboard</span>
+      </a>
+      <a href="regioes.html" class="sidebar-link">
+        <i data-lucide="map-pin"></i>
+        <span class="sidebar-link-text">Regiões</span>
+      </a>
+    </nav>
+
+    <!-- Sidebar Footer -->
+    <div class="sidebar-footer">
+      <div class="sidebar-user" id="sidebarUser">
+        <div class="sidebar-user-avatar">
+          <i data-lucide="user" size="20"></i>
+        </div>
+        <div class="sidebar-user-info">
+          <span class="sidebar-user-email" id="userEmail">Carregando...</span>
+          <span class="sidebar-user-role">Administrador</span>
+        </div>
+      </div>
+      <button class="btn-sidebar-logout" id="btnLogout" title="Sair do Sistema">
+        <i data-lucide="log-out"></i>
+        <span>Sair</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN VIEW CONTAINER -->
+  <div class="main-layout-content">
+    
+    <!-- Header with status badge only -->
+    <header class="content-header">
+      <div id="connectionStatus" class="status-badge disconnected">
+        <div class="status-dot"></div>
+        <span class="status-text">Desconectado</span>
+      </div>
+    </header>
+
+    <!-- Main page panel -->
+    <main>
+      
+      <div class="page-title-block">
+        <div>
+          <h2>Indicadores de Desempenho</h2>
+          <p>Visão geral de pesos, viagens e estatísticas em tempo real.</p>
+        </div>
+        <button id="btnSync" class="btn" title="Atualizar dados manualmente">
+          <i data-lucide="refresh-cw"></i>
+          <span>Atualizar</span>
+        </button>
+      </div>
+
+      <!-- KPI CARDS GRID -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Total de Registros</span>
+            <div class="kpi-icon-wrapper">
+              <i data-lucide="file-text"></i>
+            </div>
+          </div>
+          <div class="kpi-value" id="kpiTotal">0</div>
+          <span class="kpi-subtitle">Últimos 50 armazenados</span>
+        </div>
+        
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Placas Únicas</span>
+            <div class="kpi-icon-wrapper">
+              <i data-lucide="truck"></i>
+            </div>
+          </div>
+          <div class="kpi-value" id="kpiPlacas">0</div>
+          <span class="kpi-subtitle">Identificadas por IA</span>
+        </div>
+        
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Média Peso Líquido</span>
+            <div class="kpi-icon-wrapper">
+              <i data-lucide="scale"></i>
+            </div>
+          </div>
+          <div class="kpi-value" id="kpiPesoLiq">0.00 t</div>
+          <span class="kpi-subtitle">Baseado nos registros ativos</span>
+        </div>
+        
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Média Peso Bruto</span>
+            <div class="kpi-icon-wrapper">
+              <i data-lucide="weight"></i>
+            </div>
+          </div>
+          <div class="kpi-value" id="kpiPesoBruto">0.00 t</div>
+          <span class="kpi-subtitle">Diferença de Tara automática</span>
+        </div>
+      </div>
+
+      <!-- CHARTS GRID -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title-container">
+            <h2 class="chart-title">Comparativo de Pesos (Últimos 15)</h2>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chartWeights"></canvas>
+          </div>
+        </div>
+        
+        <div class="chart-card">
+          <div class="chart-title-container">
+            <h2 class="chart-title">Comprovantes por Região</h2>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chartRegions"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer>
+      <p>&copy; 2026 Monitoramento Florestal Comprovantes - Conectado ao Supabase Realtime.</p>
+    </footer>
+
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- SCRIPT LOGIC -->
+  <script>
+    // Supabase Configuration
+    const SUPABASE_URL = "https://idtykrzfbtagcfifbtic.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_i0Mb32Wkmi_lYqEnQWsNOw_ufCpM9O3";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // State Store
+    let records = [];
+    let weightChart = null;
+    let regionChart = null;
+    
+    // Elements Cache
+    const kpiTotal = document.getElementById('kpiTotal');
+    const kpiPlacas = document.getElementById('kpiPlacas');
+    const kpiPesoLiq = document.getElementById('kpiPesoLiq');
+    const kpiPesoBruto = document.getElementById('kpiPesoBruto');
+    
+    const btnSync = document.getElementById('btnSync');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const userEmail = document.getElementById('userEmail');
+    
+    const sidebar = document.getElementById('sidebar');
+    const btnToggleSidebar = document.getElementById('btnToggleSidebar');
+    const toggleIconContainer = document.getElementById('toggleIconContainer');
+    const btnLogout = document.getElementById('btnLogout');
+    const toastContainer = document.getElementById('toastContainer');
+
+    // INIT APP
+    window.addEventListener('DOMContentLoaded', async () => {
+      lucide.createIcons();
+
+      // Enforce auth check immediately
+      const sessionResult = await checkAuthGuard();
+      if (!sessionResult) return;
+
+      // Handle sidebar collapse toggle persistence
+      initSidebarToggle();
+      
+      // Fetch initial data
+      loadDashboardData();
+      
+      // Initialize Realtime Listener
+      setupRealtime();
+      
+      // Setup UI listeners
+      setupUIEventListeners();
+    });
+
+    // AUTH GUARD FUNCTION
+    async function checkAuthGuard() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      
+      if (!session) {
+        window.location.href = 'login.html';
+        return false;
+      }
+      
+      if (userEmail) userEmail.textContent = session.user.email;
+
+      // Listen for logout
+      supabaseClient.auth.onAuthStateChange((event, newSession) => {
+        if (event === 'SIGNED_OUT' || !newSession) {
+          window.location.href = 'login.html';
+        }
+      });
+
+      return true;
+    }
+
+    // SIDEBAR TOGGLE PERSISTENCE
+    function initSidebarToggle() {
+      const isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+      if (isCollapsed) {
+        sidebar.classList.add('collapsed');
+        toggleIconContainer.innerHTML = '<i data-lucide="chevron-right"></i>';
+      } else {
+        sidebar.classList.remove('collapsed');
+        toggleIconContainer.innerHTML = '<i data-lucide="chevron-left"></i>';
+      }
+      lucide.createIcons();
+
+      btnToggleSidebar.addEventListener('click', () => {
+        const collapsed = sidebar.classList.toggle('collapsed');
+        localStorage.setItem('sidebar-collapsed', collapsed);
+        if (collapsed) {
+          toggleIconContainer.innerHTML = '<i data-lucide="chevron-right"></i>';
+        } else {
+          toggleIconContainer.innerHTML = '<i data-lucide="chevron-left"></i>';
+        }
+        lucide.createIcons();
+      });
+    }
+
+    // FETCH INITIAL DATA
+    async function loadDashboardData() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('comprovantes')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (error) throw error;
+        
+        records = data || [];
+        updateUI();
+        showToast("Dados Carregados", "Os gráficos e métricas foram atualizados.", "success");
+      } catch (err) {
+        console.error("Error loading data:", err);
+        showToast("Erro de Carregamento", "Não foi possível carregar as estatísticas.", "danger");
+      }
+    }
+
+    // REALTIME DATABASE INTEGRATION
+    function setupRealtime() {
+      setConnectionState('connecting', 'Conectando...');
+      
+      supabaseClient
+        .channel('public:comprovantes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'comprovantes' },
+          (payload) => {
+            console.log('Realtime change:', payload);
+            handleRealtimeEvent(payload);
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            setConnectionState('connected', 'Realtime Ativo');
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            setConnectionState('disconnected', 'Desconectado');
+            setTimeout(setupRealtime, 5000);
+          } else {
+            setConnectionState('connecting', 'Reconectando...');
+          }
+        });
+    }
+
+    // PROCESS REALTIME EVENTS
+    function handleRealtimeEvent(payload) {
+      const { eventType, new: newRecord, old: oldRecord } = payload;
+      
+      if (eventType === 'INSERT') {
+        records.unshift(newRecord);
+        if (records.length > 50) {
+          records.pop();
+        }
+        updateUI();
+        triggerCelebrateConfetti();
+        showToast(
+          "Novo Comprovante!", 
+          `Placa ${newRecord.ai_placa || 'N/A'} inserida na região ${newRecord.ai_regiao || 'N/A'}.`,
+          "success"
+        );
+      } 
+      else if (eventType === 'UPDATE') {
+        const idx = records.findIndex(r => r.id === newRecord.id);
+        if (idx !== -1) {
+          records[idx] = newRecord;
+        } else {
+          loadDashboardData();
+          return;
+        }
+        updateUI();
+        showToast("Registro Atualizado", `Dados recalculados live.`, "success");
+      } 
+      else if (eventType === 'DELETE') {
+        const idx = records.findIndex(r => r.id === oldRecord.id);
+        if (idx !== -1) {
+          records.splice(idx, 1);
+          loadDashboardData();
+        } else {
+          loadDashboardData();
+        }
+        showToast("Registro Excluído", `Gráficos atualizados.`, "warning");
+      }
+    }
+
+    // UI UPDATES MANAGER
+    function updateUI() {
+      updateKpis();
+      updateCharts();
+    }
+
+    // UPDATE KPI SUMMARY CARDS
+    function updateKpis() {
+      const validRecords = records.filter(r => r.id != null);
+      kpiTotal.textContent = validRecords.length;
+      
+      const plates = new Set(validRecords.map(r => r.ai_placa).filter(p => p != null && p.trim() !== ''));
+      kpiPlacas.textContent = plates.size;
+      
+      const netWeights = validRecords.map(r => r.ai_pesoliq).filter(w => w != null);
+      if (netWeights.length > 0) {
+        const avgNet = netWeights.reduce((acc, curr) => acc + curr, 0) / netWeights.length;
+        kpiPesoLiq.textContent = `${avgNet.toFixed(2)} t`;
+      } else {
+        kpiPesoLiq.textContent = '0.00 t';
+      }
+
+      const grossWeights = validRecords.map(r => r.ai_pesobruto).filter(w => w != null);
+      if (grossWeights.length > 0) {
+        const avgGross = grossWeights.reduce((acc, curr) => acc + curr, 0) / grossWeights.length;
+        kpiPesoBruto.textContent = `${avgGross.toFixed(2)} t`;
+      } else {
+        kpiPesoBruto.textContent = '0.00 t';
+      }
+    }
+
+    // UPDATE CHARTS (CHART.JS)
+    function updateCharts() {
+      const last15 = [...records].slice(0, 15).reverse();
+      const labels = last15.map(r => {
+        const plate = r.ai_placa || 'N/A';
+        const nf = r.ai_nf ? `NF:${r.ai_nf}` : '';
+        return `${plate} ${nf}`.trim();
+      });
+      const netData = last15.map(r => r.ai_pesoliq || 0);
+      const grossData = last15.map(r => r.ai_pesobruto || 0);
+
+      if (weightChart) {
+        weightChart.data.labels = labels;
+        weightChart.data.datasets[0].data = netData;
+        weightChart.data.datasets[1].data = grossData;
+        weightChart.update();
+      } else {
+        const ctx = document.getElementById('chartWeights').getContext('2d');
+        weightChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: 'Peso Líquido (t)',
+                data: netData,
+                backgroundColor: 'rgba(79, 70, 229, 0.75)',
+                borderColor: 'rgb(79, 70, 229)',
+                borderWidth: 1.5,
+                borderRadius: 4,
+              },
+              {
+                label: 'Peso Bruto (t)',
+                data: grossData,
+                backgroundColor: 'rgba(16, 185, 129, 0.4)',
+                borderColor: 'rgb(16, 185, 129)',
+                borderWidth: 1.5,
+                borderRadius: 4,
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: { font: { family: 'Inter', size: 11 } }
+              },
+              tooltip: {
+                padding: 10,
+                titleFont: { family: 'Outfit', size: 13, weight: 'bold' },
+                bodyFont: { family: 'Inter', size: 12 }
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { font: { family: 'Inter', size: 10 }, maxRotation: 45, minRotation: 45 }
+              },
+              y: {
+                beginAtZero: true,
+                ticks: { font: { family: 'Inter', size: 10 } }
+              }
+            }
+          }
+        });
+      }
+
+      // Chart 2: Region distribution
+      const regionCounts = {};
+      records.forEach(r => {
+        if (r.ai_regiao) {
+          regionCounts[r.ai_regiao] = (regionCounts[r.ai_regiao] || 0) + 1;
+        } else {
+          regionCounts['N/D'] = (regionCounts['N/D'] || 0) + 1;
+        }
+      });
+
+      const rLabels = Object.keys(regionCounts);
+      const rData = Object.values(regionCounts);
+      
+      const backgroundColors = [
+        'rgba(79, 70, 229, 0.7)',
+        'rgba(13, 148, 136, 0.7)',
+        'rgba(245, 158, 11, 0.7)',
+        'rgba(236, 72, 153, 0.7)',
+        'rgba(16, 185, 129, 0.7)',
+        'rgba(59, 130, 246, 0.7)',
+        'rgba(107, 114, 128, 0.7)'
+      ];
+
+      if (regionChart) {
+        regionChart.data.labels = rLabels;
+        regionChart.data.datasets[0].data = rData;
+        regionChart.update();
+      } else {
+        const ctx2 = document.getElementById('chartRegions').getContext('2d');
+        regionChart = new Chart(ctx2, {
+          type: 'doughnut',
+          data: {
+            labels: rLabels,
+            datasets: [{
+              data: rData,
+              backgroundColor: backgroundColors.slice(0, rLabels.length),
+              borderWidth: 2,
+              borderColor: '#ffffff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'right',
+                labels: { font: { family: 'Inter', size: 11 }, boxWidth: 12 }
+              },
+              tooltip: {
+                padding: 10,
+                bodyFont: { family: 'Inter', size: 12 }
+              }
+            },
+            cutout: '65%'
+          }
+        });
+      }
+    }
+
+    function setConnectionState(state, text) {
+      connectionStatus.className = `status-badge ${state}`;
+      connectionStatus.querySelector('.status-text').textContent = text;
+    }
+
+    // EVENT LISTENERS BINDING
+    function setupUIEventListeners() {
+      btnSync.addEventListener('click', () => {
+        const icon = btnSync.querySelector('i');
+        icon.classList.add('animate-spin');
+        loadDashboardData().finally(() => {
+          setTimeout(() => icon.classList.remove('animate-spin'), 600);
+        });
+      });
+
+      btnLogout.addEventListener('click', async () => {
+        btnLogout.disabled = true;
+        const icon = btnLogout.querySelector('i');
+        if (icon) icon.classList.add('animate-spin');
+        await supabaseClient.auth.signOut();
+      });
+    }
+
+    // TOASTS
+    function showToast(title, desc, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast`;
+      let iconName = 'check-circle-2';
+      let borderCol = 'var(--color-success)';
+      
+      if (type === 'warning') {
+        iconName = 'alert-circle';
+        borderCol = 'var(--color-warning)';
+      } else if (type === 'danger') {
+        iconName = 'x-circle';
+        borderCol = 'var(--color-danger)';
+      }
+      
+      toast.style.borderLeftColor = borderCol;
+      toast.innerHTML = `
+        <i data-lucide="${iconName}" class="toast-icon" style="color: ${borderCol}"></i>
+        <div class="toast-content">
+          <div class="toast-title">${title}</div>
+          <div class="toast-desc">${desc}</div>
+        </div>
+      `;
+      toastContainer.appendChild(toast);
+      lucide.createIcons();
+      
+      setTimeout(() => {
+        toast.classList.add('show');
+      }, 50);
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    function triggerCelebrateConfetti() {
+      confetti({ particleCount: 50, spread: 60, origin: { x: 0.1, y: 0.8 } });
+      confetti({ particleCount: 50, spread: 60, origin: { x: 0.9, y: 0.8 } });
+    }
+  </script>
+</body>
+</html>
